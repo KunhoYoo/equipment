@@ -17,3 +17,5 @@
 - **Modern UI**: Toss 스타일의 깔끔한 디자인 시스템 적용
 - **Responsive**: PC, 태블릿, 모바일 완벽 대응
 - **Lightweight**: 외부 라이브러리 의존성을 최소화한 순수 HTML/JS 구조
+
+- https://kunhoyoo.github.io/equipment/
