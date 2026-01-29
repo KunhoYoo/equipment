@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>MBC 장비팀 장비관리</title>
+  <title>MBC 장비관리</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Nanum+Gothic:wght@400;700&display=swap" rel="stylesheet">
@@ -213,14 +213,10 @@
     /* 대시보드 */
     .dashboard-grid {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      /* grid-template-columns: 1fr 1fr;  <-- 기존: 2단 그리드 */
+      grid-template-columns: 1fr; /* 수정: 1단 그리드 (가로 꽉 참) */
       gap: 20px;
       margin-top: 20px;
-    }
-    .dashboard-grid-small {
-      display: grid; gap: 20px;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      align-items: stretch;
     }
     .stat-card { padding: 20px 24px; }
     .stat-card h3 {
@@ -742,7 +738,7 @@
               <div><label for="eq_name">장비명</label><input id="eq_name" placeholder="예) GoPro10"></div>
             </div>
             <div class="row mt16">
-              <div><label for="eq_cat">분류/모델</label><input id="eq_cat" placeholder="예) 카메라"></div>
+              <div><label for="eq_cat">분류/모델</label><input id="eq_cat" placeholder="예) 액션캠"></div>
               <div><label for="eq_year">도입년도</label><input id="eq_year" type="number" placeholder="2026"></div>
             </div>
             <div class="mt16">
@@ -849,7 +845,7 @@
     <div id="asset-list-content">
       <div class="table-wrap">
         <table class="table" id="all-assets-table">
-          <thead><tr><th>사진</th><th>ID</th><th>이름</th><th>분류</th><th>상태</th><th>보유자</th></tr></thead>
+          <thead><tr><th>사진</th><th>ID</th><th>이름</th><th>분류</th><th>상태</th><th>보유자</th><th>관리</th></tr></thead>
           <tbody></tbody>
         </table>
       </div>
@@ -905,7 +901,6 @@
       });
 
       // 3) 로그 동기화 (Realtime DB는 자동 정렬 지원이 약하므로 전체 로드 후 JS 정렬)
-      // (최적화를 위해 limitToLast 등을 쓸 수 있으나 코드 단순화를 위해 전체 로드)
       onValue(ref(db, 'logs'), (snapshot) => {
         const val = snapshot.val();
         if(val) {
@@ -1158,7 +1153,6 @@
       proceed(emp);
     }
     
-    // *** [중요 수정] 모달 닫기 순서 변경 ***
     async function proceed(employee) {
        // currentMode를 변수에 먼저 저장
        const mode = currentMode;
@@ -1366,7 +1360,7 @@
       } catch(e) { App.toast('오류: '+e.message, 'error'); }
     },
 
-// 장비 등록 (Firebase Storage 적용 - 안정성 강화 버전)
+    // 장비 등록 (Firebase Storage 적용 - 안정성 강화 버전)
     addAsset: async () => {
       const id = App.val('eq_id'), name = App.val('eq_name');
       if (!id || !name) { App.toast('장비ID와 명칭은 필수입니다.', 'error'); return; }
@@ -1474,7 +1468,7 @@
   };
   window.Admin = Admin;
 
-  // --- Home Logic ---
+  // --- Home Logic (장비 삭제 기능 추가) ---
   const Home = {
     showAllAssets: () => {
        const assets = Object.values(Store.data().assets);
@@ -1482,12 +1476,16 @@
        if(!tb) return;
        let html = '';
        if(assets.length === 0) {
-          html = '<tr><td colspan="6" style="text-align:center;">장비가 없습니다.</td></tr>';
+          html = '<tr><td colspan="7" style="text-align:center;">장비가 없습니다.</td></tr>';
        } else {
           assets.forEach(a => {
              const st = a.holder ? '<span class="badge bd-out">반출</span>' : '<span class="badge bd-ok">보관</span>';
              const img = a.imgUrl ? `<img class="imgph" src="${a.imgUrl}">` : '';
-             html += `<tr><td>${img}</td><td>${a.id}</td><td>${a.name}</td><td>${a.cat||''}</td><td>${st}</td><td>${a.holder||'-'}</td></tr>`;
+             // 삭제 버튼 추가
+             html += `<tr>
+                <td>${img}</td><td>${a.id}</td><td>${a.name}</td><td>${a.cat||''}</td><td>${st}</td><td>${a.holder||'-'}</td>
+                <td><button class="btn inline danger" onclick="Home.deleteAsset('${a.id}')">삭제</button></td>
+             </tr>`;
           });
        }
        tb.innerHTML = html;
@@ -1495,6 +1493,24 @@
     },
     hideAllAssets: () => {
        document.getElementById('asset-list-overlay').classList.remove('show');
+    },
+    // 장비 삭제 기능
+    deleteAsset: async (id) => {
+        if(!confirm('정말 삭제하시겠습니까?')) return;
+        
+        App.showLoading(true, '삭제 중...');
+        try {
+            await Store.deleteAsset(id);
+            App.toast('삭제되었습니다.', 'info');
+            // 목록 갱신을 위해 다시 호출 (DB 리스너가 있긴 하지만 모달 갱신 확실히)
+            // 약간의 딜레이 후 갱신하거나, 리스너가 이미 있으므로 자동으로 될 수도 있지만 명시적 호출
+            setTimeout(() => Home.showAllAssets(), 300); 
+        } catch(e) {
+            console.error(e);
+            App.toast('삭제 실패: ' + e.message, 'error');
+        } finally {
+            App.showLoading(false);
+        }
     }
   };
   window.Home = Home;
