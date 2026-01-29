@@ -1,0 +1,1535 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>MBC 장비팀 장비관리</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Nanum+Gothic:wght@400;700&display=swap" rel="stylesheet">
+  
+  <style>
+    /* ===== Modern / TOSS-like Theme ===== */
+    :root {
+      --mbc-blue: #1477C9;
+      --primary: var(--mbc-blue);
+      --primary-light: #e8f4ff;
+      --primary-dark: #0f66ad;
+
+      --gray-50: #f9fafb;
+      --gray-100: #f3f4f6;
+      --gray-200: #e5e7eb;
+      --gray-300: #d1d5db;
+      --gray-400: #9ca3af;
+      --gray-500: #6b7280;
+      --gray-600: #4b5563;
+      --gray-700: #374151;
+      --gray-800: #1f2937;
+      --gray-900: #111827;
+      
+      --red-50: #fff1f2;
+      --red-100: #ffe4e6;
+      --red-500: #ef4444;
+      --red-600: #dc2626;
+      --red-700: #b91c1c;
+
+      --green-50: #f0fdf4;
+      --green-100: #dcfce7;
+      --green-600: #16a34a;
+      --green-700: #15803d;
+
+      --bg: var(--gray-50);
+      --panel: #ffffff;
+      --text-primary: var(--gray-900);
+      --text-secondary: var(--gray-600);
+      --text-muted: var(--gray-400);
+      --border-color: var(--gray-200);
+
+      --radius-sm: 4px;
+      --radius-md: 6px;
+      --radius-lg: 8px;
+      --radius-full: 9999px;
+
+      --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+      --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+      --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    }
+    
+    * { box-sizing: border-box }
+    
+    html, body { height: 100% }
+    
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text-primary);
+      font-family: 'Inter', 'Nanum Gothic', ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Apple Color Emoji", "Noto Color Emoji";
+      font-weight: 400;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    
+    a { color: var(--primary); text-decoration: none }
+    a:hover { text-decoration: underline }
+    
+    .wrap { max-width: 1200px; margin: 0 auto; padding: 24px 18px }
+    
+    /* Header */
+    header {
+      position: sticky; top: 0; z-index: 10;
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border-color);
+      box-shadow: var(--shadow-sm);
+    }
+    .header-inner {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 0;
+    }
+    .title { cursor: pointer; display: flex; align-items: center; gap: 10px; }
+    .title h1 {
+      margin: 0; font-weight: 700; letter-spacing: -0.2px;
+      font-size: clamp(18px, 1.6vw, 22px);
+    }
+    .title svg { width: 28px; height: 28px; color: var(--primary); }
+    
+    /* NEW: Admin Button */
+    .header-right { display: flex; align-items: center; gap: 16px; }
+    #admin-button {
+      font-weight: 600;
+      font-size: 14px;
+      gap: 6px;
+    }
+    #admin-button svg { width: 16px; height: 16px; }
+
+    .status-pill {
+      display: flex; gap: 10px; align-items: center;
+      padding: 8px 12px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-full);
+      background: var(--panel);
+      font-size: clamp(12px, 1.3vw, 13px);
+      color: var(--text-secondary);
+    }
+    #connMode {
+      display: flex; align-items: center; gap: 6px; font-weight: 500;
+    }
+    #connMode::before {
+      content: ''; display: block; width: 8px; height: 8px;
+      border-radius: 50%; background: var(--gray-300);
+      transition: background .3s;
+    }
+    #connMode.live::before { background: var(--green-600); }
+    #connMode.local::before { background: var(--red-600); }
+    #clock { color: var(--text-muted); }
+
+    /* 공통 카드/버튼 */
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+      transition: box-shadow .2s;
+    }
+    .card:hover {
+      box-shadow: var(--shadow-md);
+    }
+    .section { padding: 24px }
+    .card-header {
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--border-color);
+      margin-bottom: 20px;
+    }
+    .card-header h2, .card-header h3 {
+      margin: 0;
+      font-weight: 600;
+      font-size: clamp(18px, 1.8vw, 20px);
+    }
+    
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      cursor: pointer; user-select: none;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 10px 16px;
+      background: var(--panel);
+      color: var(--text-primary);
+      font-weight: 600;
+      font-size: clamp(13px, 1.4vw, 14px);
+      transition: all .15s;
+    }
+    .btn:hover { background: var(--gray-50); border-color: var(--gray-300); }
+    .btn:active { transform: translateY(1px); }
+    .btn:focus-visible {
+      outline: 2px solid var(--primary);
+      outline-offset: 2px;
+    }
+    .btn.primary {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #fff;
+      box-shadow: var(--shadow-sm);
+    }
+    .btn.primary:hover { background: #1069b3; border-color: #1069b3; }
+    .btn.ghost { background: transparent; border-color: transparent; box-shadow: none; }
+    .btn.ghost:hover { background: var(--gray-100); }
+    .btn.danger {
+      background: var(--red-50);
+      border-color: var(--red-100);
+      color: var(--red-700);
+    }
+    .btn.danger:hover { background: var(--red-100); border-color: var(--red-500); }
+    .btn.inline { padding: 8px 12px; font-weight: 500; }
+    .btn svg { width: 16px; height: 16px; }
+
+    /* 홈 타일 (대시보드용) */
+    .home-tile {
+      position: relative;
+      display: flex; flex-direction: column; justify-content: space-between;
+      min-height: 220px;
+      padding: 24px;
+      cursor: pointer; overflow: hidden;
+    }
+    .home-tile-icon {
+      width: 48px; height: 48px;
+      border-radius: var(--radius-lg);
+      background: var(--primary-light);
+      color: var(--primary);
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 16px;
+    }
+    .home-tile-icon svg { width: 28px; height: 28px; }
+    .home-tile h2 {
+      margin: 0 0 8px 0; font-weight: 700;
+      font-size: clamp(20px, 2.1vw, 24px);
+      letter-spacing: -0.2px;
+    }
+    .home-tile p {
+      margin: 0; color: var(--text-secondary);
+      font-size: clamp(14px, 1.5vw, 15px);
+      line-height: 1.6;
+    }
+    
+    /* 대시보드 */
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-top: 20px;
+    }
+    .dashboard-grid-small {
+      display: grid; gap: 20px;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      align-items: stretch;
+    }
+    .stat-card { padding: 20px 24px; }
+    .stat-card h3 {
+      margin: 0 0 4px 0; font-weight: 600;
+      font-size: 16px; color: var(--text-secondary);
+    }
+    .stat-value {
+      font-size: 36px; font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 16px;
+    }
+    .stat-value span { font-size: 18px; font-weight: 500; color: var(--text-muted); }
+    .stat-bar {
+      width: 100%; height: 8px;
+      background: var(--gray-100);
+      border-radius: var(--radius-full);
+      overflow: hidden;
+    }
+    .stat-bar-inner {
+      height: 100%; width: 0%;
+      background: var(--primary);
+      transition: width .5s ease-out;
+    }
+
+    /* 페이지 */
+    .page { display: none }
+    /* page-main-home은 기본으로 보이도록 설정 */
+    .page.show { display: block }
+    #page-main-home.show { display: flex; } /* Flex로 재정의 */
+
+    /* 폼/테이블 */
+    label {
+      font-size: clamp(13px, 1.3vw, 14px);
+      color: var(--text-secondary);
+      font-weight: 500;
+      display: block; margin-bottom: 6px;
+    }
+    input, select, textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-color);
+      background: var(--panel);
+      color: var(--text-primary);
+      font-size: clamp(13px, 1.4vw, 14px);
+      outline: none;
+      transition: border-color .2s, box-shadow .2s;
+    }
+    textarea { min-height: 110px; resize: vertical; font-family: inherit; }
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--primary-light);
+    }
+    input::placeholder { color: var(--gray-400); }
+    
+    .split { 
+  display: grid; 
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); 
+  gap: 24px; 
+}
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .mt4{margin-top:4px}.mt8{margin-top:8px}.mt12{margin-top:12px}.mt16{margin-top:16px}.mt20{margin-top:20px}.mt24{margin-top:24px}
+    
+		.table-wrap {
+	  width: 100%;
+	  border: 1px solid var(--border-color);
+	  border-radius: var(--radius-lg);
+	  /* overflow: hidden;  <-- 삭제하거나 아래처럼 변경 */
+	  overflow: auto; /* 내용이 넘치면 스크롤 생성 */
+	  background: var(--panel);
+	}
+    .table {
+      width: 100%; border-collapse: collapse;
+      font-size: clamp(13px, 1.4vw, 14px);
+    }
+    .table th, .table td {
+      border-bottom: 1px solid var(--border-color);
+      padding: 14px 16px;
+      text-align: left;
+      vertical-align: middle;
+	  white-space: nowrap;
+    }
+    .table th {
+      background: var(--gray-50);
+      color: var(--text-secondary);
+      font-weight: 600;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .table tbody tr:last-child th,
+    .table tbody tr:last-child td {
+      border-bottom: 0;
+    }
+    .table tbody tr:nth-child(even) {
+      background-color: var(--gray-50);
+    }
+    
+    .imgph {
+      width: 72px; height: 54px;
+      object-fit: cover;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-color);
+      background: var(--gray-100);
+      vertical-align: middle;
+    }
+    #eq_preview { display: none; }
+    #eq_preview[src] { display: block; }
+    
+    .badge {
+      padding: 3px 8px;
+      border-radius: var(--radius-full);
+      font-size: 12px;
+      border: 1px solid var(--border-color);
+      background: var(--gray-100);
+      color: var(--text-secondary);
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .bd-ok {
+      background: var(--green-50); color: var(--green-700);
+      border-color: var(--green-100);
+    }
+    .bd-ok::before { content: ''; display: block; width: 6px; height: 6px; border-radius: 50%; background: var(--green-600); }
+    .bd-out {
+      background: var(--red-50); color: var(--red-700);
+      border-color: var(--red-100);
+    }
+    .bd-out::before { content: ''; display: block; width: 6px; height: 6px; border-radius: 50%; background: var(--red-600); }
+    
+    .pill {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 8px 12px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-full);
+      background: var(--panel);
+      font-size: clamp(13px, 1.4vw, 14px);
+    }
+
+    /* Toast Notifications */
+    #toast-container {
+      position: fixed; top: 20px; right: 20px;
+      z-index: 9999; display: flex;
+      flex-direction: column; gap: 10px;
+    }
+    .toast {
+      padding: 16px 20px;
+      border-radius: var(--radius-md);
+      background: var(--gray-800);
+      color: var(--gray-50);
+      font-weight: 500;
+      box-shadow: var(--shadow-lg);
+      transform: translateX(calc(100% + 20px));
+      transition: transform .4s ease-in-out;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .toast.show { transform: translateX(0); }
+    .toast.success { background: var(--green-700); color: #fff; }
+    .toast.error { background: var(--red-700); color: #fff; }
+    .toast svg { width: 20px; height: 20px; }
+
+    /* Loader Overlay */
+    #loader-overlay {
+      position: fixed; inset: 0;
+      background: rgba(255, 255, 255, 0.7);
+      backdrop-filter: blur(4px);
+      z-index: 9998;
+      display: none; /* Changed to none */
+      align-items: center;
+      justify-content: center;
+    }
+    #loader-overlay.show { display: flex; }
+    .spinner {
+      width: 48px; height: 48px;
+      border: 5px solid var(--gray-200);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* --- NEW MAIN HOME PAGE --- */
+    #page-main-home {
+      /* display: flex; (moved to .page.show) */
+      gap: 24px;
+      justify-content: center;
+      align-items: stretch;
+      padding-top: 4vh;
+      height: 70vh;
+    }
+    .main-action-btn {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      padding: 40px;
+      text-align: center;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 28px;
+      letter-spacing: -0.5px;
+      color: var(--text-primary);
+      transition: all .2s;
+    }
+    .main-action-btn svg {
+      width: 64px;
+      height: 64px;
+      color: var(--primary);
+    }
+    #btn-main-checkout { color: var(--primary); }
+    #btn-main-checkout svg { color: var(--primary); }
+    #btn-main-checkin { color: var(--green-700); }
+    #btn-main-checkin svg { color: var(--green-700); }
+    
+    /* --- NEW RFID SCAN MODAL --- */
+    #rfid-scan-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.6);
+      z-index: 10000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(4px);
+      padding: 20px;
+    }
+    #rfid-scan-overlay.show { display: flex; }
+    #rfid-scan-modal {
+      background: var(--panel);
+      width: 100%;
+      max-width: 480px;
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-lg);
+    }
+    .rfid-modal-header {
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .rfid-modal-header h2 { margin: 0; font-size: 20px; }
+    .rfid-modal-body {
+      padding: 32px 24px;
+      text-align: center;
+    }
+    .rfid-icon-wrapper {
+      width: 80px; height: 80px;
+      margin: 0 auto 24px auto;
+      border-radius: 50%;
+      background: var(--primary-light);
+      color: var(--primary);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .rfid-icon-wrapper svg { width: 40px; height: 40px; }
+    .rfid-modal-body p {
+      font-size: 16px;
+      color: var(--text-secondary);
+      margin: 0 0 20px 0;
+    }
+    /* Hidden input to catch scanner wedge */
+    #rfid_scan_input {
+      width: 100%;
+      border: 1px dashed var(--border-color);
+      text-align: center;
+      padding: 12px;
+      font-size: 16px;
+      color: var(--text-muted);
+    }
+    #rfid_scan_input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--primary-light);
+    }
+    /* Manual entry section */
+    #rfid-manual-entry {
+      display: none; /* Hidden by default */
+      margin-top: 24px;
+      text-align: left;
+      border-top: 1px solid var(--border-color);
+      padding-top: 24px;
+    }
+    .rfid-modal-footer {
+      padding: 16px 24px;
+      border-top: 1px solid var(--border-color);
+      background: var(--gray-50);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* --- OTHER POPUP MODALS --- */
+    .popup-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0, 0, 0, 0.6);
+      z-index: 10000;
+      display: none; align-items: center; justify-content: center;
+      backdrop-filter: blur(4px);
+      padding: 20px;
+    }
+    .popup-overlay.show { display: flex; }
+    #image-popup-img {
+      max-width: 90vw; max-height: 90vh;
+      box-shadow: var(--shadow-lg);
+      border-radius: var(--radius-lg);
+    }
+    #asset-list-modal {
+      background: var(--panel);
+      width: 90%; max-width: 1000px; max-height: 80vh;
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-lg);
+      display: flex; flex-direction: column;
+    }
+    #asset-list-header {
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    #asset-list-header h2 { margin: 0; font-size: 20px; }
+    #asset-list-content { padding: 24px; overflow-y: auto; }
+    
+
+    /* 반응형 */
+    @media(max-width:1024px){
+      .dashboard-grid { grid-template-columns: 1fr; }
+      .dashboard-grid-small { grid-template-columns:repeat(2,minmax(0,1fr)); }
+      .split { grid-template-columns: 1fr; }
+    }
+    @media(max-width:640px){
+      .wrap { padding: 18px 12px; }
+      .header-inner { padding: 12px 0; }
+      .title h1 { font-size: 18px; }
+      .title svg { width: 24px; height: 24px; }
+      .status-pill { display: none; } /* Hide status on mobile */
+      
+      #page-main-home { flex-direction: column; height: auto; padding-top: 1vh; }
+      .main-action-btn { font-size: 22px; padding: 32px 20px; }
+      .main-action-btn svg { width: 48px; height: 48px; }
+
+      .dashboard-grid-small { grid-template-columns: 1fr; }
+      .row { grid-template-columns: 1fr; }
+      
+      .section { padding: 16px; }
+      .card-header { padding: 16px; }
+      .table th, .table td { padding: 10px 8px; }
+      .btn { padding: 12px 16px; }
+      
+      #asset-list-modal { width: 100%; max-height: 90vh; }
+      #asset-list-content { padding: 16px; }
+      #asset-list-header { padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="toast-container"></div>
+
+<div id="loader-overlay">
+  <div>
+    <div class="spinner"></div>
+    <div id="loader-text" class="mt16" style="color: var(--text-primary); font-weight: 600;">처리 중...</div>
+  </div>
+</div>
+
+<header>
+  <div class="wrap header-inner">
+    <div class="title" onclick="Router.go('#/')">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 0v3.75m-16.5-3.75v3.75m16.5 0v3.75C20.25 16.153 16.556 18 12 18s-8.25-1.847-8.25-4.125v-3.75m16.5 0c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125" />
+      </svg>
+      <h1>MBC 장비팀 장비관리</h1>
+    </div>
+    <div class="header-right">
+      <div class="status-pill" aria-live="polite">
+        <span id="connMode">연결 중...</span>
+        <span id="clock"></span>
+      </div>
+      <button class="btn ghost" id="admin-button" onclick="Router.goToAdminDashboardWithAuth()">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M17.982 18.725A7.488 7.488 0 0012 15.75a7.488 7.488 0 00-5.982 2.975m11.963 0a9 9 0 10-11.963 0m11.963 0A8.966 8.966 0 0112 21a8.966 8.966 0 01-5.982-2.275M15 9.75a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+        관리자
+      </button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  
+  <div id="page-main-home" class="page">
+    <div class="main-action-btn card" id="btn-main-checkout" onclick="Modal.showRfidScan('checkout')">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" /></svg>
+      <span>장비 불출</span>
+    </div>
+    <div class="main-action-btn card" id="btn-main-checkin" onclick="Modal.showRfidScan('checkin')">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" /></svg>
+      <span>장비 반납</span>
+    </div>
+  </div>
+
+  <div id="page-checkout" class="page">
+    <div class="card">
+      <div class="card-header">
+        <h2 id="checkout_title">장비 불출</h2>
+      </div>
+      <div class="section">
+        <div class="pill" style="margin-bottom:20px; background:var(--primary-light); border-color:var(--primary); color:var(--primary-dark);">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:16px;height:16px"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" /></svg>
+          <span id="checkout_user">홍길동</span>
+        </div>
+        
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+           <label style="font-size:16px;">바코드 스캔 대기 중...</label>
+           <button class="btn inline" onclick="Checkout.toggleManual()">수동 입력</button>
+        </div>
+        
+        <div id="manualPanel" class="card" style="display:none; margin-top:12px; padding:16px; background:var(--gray-50);">
+           <h4 style="margin:0 0 12px 0; font-weight: 600; font-size: 16px;">장비 입력</h4>
+           <label for="manual_asset_single">장비ID 단건</label>
+           <div style="display:flex;gap:8px">
+             <input id="manual_asset_single" placeholder="예) ENG-0001" />
+             <button class="btn" onclick="Checkout.addManualAssetSingle()">추가</button>
+           </div>
+           <div class="mt16">
+             <label for="manual_asset_bulk">장비ID 다건(쉼표, 공백, 줄바꿈 구분)</label>
+             <textarea id="manual_asset_bulk" placeholder="예) ENG-0002, OSMO-12&#10;GOPRO-05 OSMO-99"></textarea>
+             <div class="mt8"><button class="btn" onclick="Checkout.addManualAssetBulk()">여러 개 추가</button></div>
+           </div>
+        </div>
+
+        <div class="mt20">
+          <h3 style="margin:0 0 12px 0;font-weight:600;font-size:clamp(17px,1.7vw,19px)">스캔 목록</h3>
+          <div class="table-wrap">
+            <table class="table" id="scan_table">
+              <thead><tr><th>이미지</th><th>장비ID</th><th>장비명</th><th>분류</th><th>상태</th><th></th></tr></thead>
+              <tbody>
+                <tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 32px 0;">스캔 대기 중...</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="mt16" style="display:flex;gap:10px">
+            <button class="btn danger" onclick="Checkout.clearList()">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+              전체 취소
+            </button>
+            <div style="flex:1"></div>
+            <button class="btn primary" onclick="Checkout.finish()">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
+              완료
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="page-admin-dash" class="page">
+     <div class="header-inner" style="padding:0 0 20px 0;">
+       <h2 style="margin:0; font-size:24px; font-weight:700;">관리자 대시보드</h2>
+       <button class="btn" onclick="Router.go('#/admin')">장비/사원 관리 &gt;</button>
+     </div>
+     
+     <div class="home-tile card" onclick="Router.go('#/monitor')" style="min-height:auto; align-items:center; flex-direction:row; padding:20px;">
+        <div style="flex:1">
+           <h2 style="font-size:20px; margin-bottom:4px;">실시간 불출 현황(로그)</h2>
+           <p>누가 무엇을 가져갔는지 확인하세요.</p>
+        </div>
+        <div class="home-tile-icon" style="margin:0; width:56px; height:56px;"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3v11.25A2.25 2.25 0 006 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0018 16.5h-2.25m-7.5 0h7.5m-7.5 0l-1 3m8.5-3l1 3m0 0l.5 1.5m-.5-1.5h-9.5m0 0l-.5 1.5M9 11.25v1.5M12 9v3.75m3-6v6" /></svg></div>
+     </div>
+
+     <div class="dashboard-grid">
+        <div class="card stat-card">
+           <h3 id="dash_stat_label_out">반출: 0</h3>
+           <div class="stat-value" id="dash_stat_out">0 <span>/ 0</span></div>
+           <div class="stat-bar"><div class="stat-bar-inner" id="dash_stat_bar" style="width:0%"></div></div>
+           <div style="margin-top:8px; display:flex; justify-content:space-between; font-size:13px; color:var(--text-secondary);">
+              <span id="dash_stat_label_in">보관: 0</span>
+           </div>
+        </div>
+        </div>
+  </div>
+
+  <div id="page-admin" class="page">
+    <div class="card">
+      <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+        <h2>장비/사원 관리</h2>
+        <div class="pill">관리 전용</div>
+      </div>
+      <div class="section" style="padding-top: 0;">
+        <div class="split">
+          <div>
+            <h3 style="margin:0 0 16px 0;font-weight:600;font-size:clamp(17px,1.7vw,19px)">사원(카드) 등록</h3>
+            <div class="row">
+              <div><label for="emp_name">사원명</label><input id="emp_name" placeholder="예) 홍길동"></div>
+              <div><label for="emp_dept">부서/직무</label><input id="emp_dept" placeholder="예) 취재지원파트"></div>
+            </div>
+            <div class="row mt16">
+              <div><label for="emp_rfid">RFID UID (스캔/수동 입력)</label><input id="emp_rfid" placeholder="사원증 태그 또는 직접 입력" onfocus="Scan.listenFor('rfid', this)"></div>
+              <div><label for="emp_role">권한</label><select id="emp_role"><option value="user">일반</option><option value="manager">관리자</option></select></div>
+            </div>
+            <button class="btn primary mt20" onclick="Admin.addEmployee()">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zM4 19.235v-.11a6.375 6.375 0 0112.75 0v.109A12.318 12.318 0 0110.374 21c-2.331 0-4.512-.645-6.374-1.766z" /></svg>
+              사원 등록
+            </button>
+
+            <div class="table-wrap mt20" style="max-height: 40vh; overflow: auto;">
+              <table class="table" id="asset_list_table_emp">
+                 <thead><tr><th>이름</th><th>부서</th><th>RFID</th><th>권한</th><th>삭제</th></tr></thead>
+                 <tbody id="emp_list_body"></tbody>
+              </table>
+            </div>
+          </div>
+          
+          <div style="border-left:1px solid var(--border-color); padding-left:24px;">
+            <h3 style="margin:0 0 16px 0;font-weight:600;font-size:clamp(17px,1.7vw,19px)">장비 등록</h3>
+            <div class="row">
+              <div><label for="eq_id">장비ID (바코드)</label><input id="eq_id" placeholder="스캔 or 입력" onfocus="Scan.listenFor('eq', this)"></div>
+              <div><label for="eq_name">장비명</label><input id="eq_name" placeholder="예) SONY FX6"></div>
+            </div>
+            <div class="row mt16">
+              <div><label for="eq_cat">분류/모델</label><input id="eq_cat" placeholder="예) 카메라"></div>
+              <div><label for="eq_year">도입년도</label><input id="eq_year" type="number" placeholder="2023"></div>
+            </div>
+            <div class="mt16">
+              <label for="eq_note">특이사항</label>
+              <textarea id="eq_note" placeholder="메모..."></textarea>
+            </div>
+            <div class="mt16">
+              <label>장비 사진</label>
+              <input type="file" id="eq_img" accept="image/*" onchange="Admin.previewImg(this)">
+              <div class="mt8"><img id="eq_preview" class="imgph" style="width:100px;height:auto;"></div>
+            </div>
+            <button class="btn primary mt20" onclick="Admin.addAsset()">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              장비 등록
+            </button>
+            <div class="mt20"><button class="btn ghost" onclick="Home.showAllAssets()">전체 장비 목록 보기</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="page-monitor" class="page">
+    <div class="card">
+       <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+        <h2>불출/반납 이력</h2>
+        <div style="display:flex; gap:8px;">
+           <input id="filter_text" placeholder="검색어 (이름, 장비명...)" style="width:200px;" oninput="Monitor.render()">
+           <select id="filter_state" style="width:120px;" onchange="Monitor.render()">
+             <option value="">전체</option>
+             <option value="OUT">반출</option>
+             <option value="IN">반납</option>
+           </select>
+           <button class="btn" onclick="Monitor.exportExcel()">엑셀 다운</button>
+        </div>
+      </div>
+      <div class="section" style="padding-top:0;">
+        <div class="table-wrap" style="max-height: 70vh;">
+          <table class="table" id="log_table">
+            <thead>
+              <tr>
+                <th>시간</th>
+                <th>사용자</th>
+                <th>장비ID</th>
+                <th>장비명</th>
+                <th>구분</th>
+                <th>상태</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<div id="rfid-scan-overlay">
+  <div id="rfid-scan-modal">
+    <div class="rfid-modal-header">
+      <h2 id="rfid-modal-title">사원증 태그</h2>
+      <button class="btn ghost" onclick="Modal.hide()">닫기</button>
+    </div>
+    <div class="rfid-modal-body">
+       <div class="rfid-icon-wrapper">
+         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+           <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z" />
+         </svg>
+       </div>
+       <p id="rfid-msg">사원증을 리더기에 대주세요.</p>
+       <input id="rfid_scan_input" autocomplete="off" placeholder="여기를 클릭 후 스캔하세요" onblur="setTimeout(()=>this.focus(), 10)">
+       
+       <div id="rfid-manual-entry">
+         <label>사원 선택 (수동)</label>
+         <div style="display:flex; gap:8px;">
+           <select id="manual_emp_select"></select>
+           <button class="btn primary" onclick="Modal.processManualSelect()">선택</button>
+         </div>
+       </div>
+    </div>
+    <div class="rfid-modal-footer">
+      <button class="btn" onclick="Modal.toggleManual()">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 7.5l3 2.25-3 2.25m3 0h3m-3 0l3 2.25-3 2.25M6.75 15l3-2.25-3-2.25m3 0h3m-3 0l3-2.25 3 2.25m-9 3l3-2.25 3 2.25" /></svg>
+        수동 입력
+      </button>
+    </div>
+  </div>
+</div>
+
+<div id="image-popup-overlay" class="popup-overlay" onclick="Monitor.hideImagePopup()">
+  <img id="image-popup-img" src="" alt="장비 이미지 원본" onclick="event.stopPropagation()">
+</div>
+
+<div id="asset-list-overlay" class="popup-overlay" onclick="Home.hideAllAssets()">
+  <div id="asset-list-modal" onclick="event.stopPropagation()">
+    <div id="asset-list-header">
+      <h2>전체 장비 목록</h2>
+      <button class="btn ghost" onclick="Home.hideAllAssets()">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width: 20px; height: 20px;"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+        닫기
+      </button>
+    </div>
+    <div id="asset-list-content">
+      <div class="table-wrap">
+        <table class="table" id="all-assets-table">
+          <thead><tr><th>사진</th><th>ID</th><th>이름</th><th>분류</th><th>상태</th><th>보유자</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  // ==========================================
+  // 1. Firebase 설정 및 초기화 (CDN 방식)
+  // ==========================================
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+  import { getFirestore, collection, doc, setDoc, updateDoc, addDoc, onSnapshot, writeBatch, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+  import { getStorage, ref, uploadString, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyCcWWLiYxvKB8_9gaahW5fwyBavgO-AZQ8",
+    authDomain: "equipment-a6a8c.firebaseapp.com",
+    projectId: "equipment-a6a8c",
+    storageBucket: "equipment-a6a8c.firebasestorage.app",
+    messagingSenderId: "816613863838",
+    appId: "1:816613863838:web:48dcd792f528e1c53a268f"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const storage = getStorage(app);
+
+  // ==========================================
+  // 2. 데이터 저장소 (FirebaseStore)
+  // ==========================================
+  // 메모리 데이터 (기존 UI 호환용)
+  let mem = { employees: {}, assets: {}, logs: [] };
+
+  const Store = (() => {
+    function init() {
+      // 1) 사원 목록 동기화
+      onSnapshot(collection(db, "employees"), (snap) => {
+        mem.employees = {};
+        snap.forEach(d => mem.employees[d.id] = d.data());
+        // UI 갱신 (Admin 로드 후)
+        if (typeof Admin !== 'undefined') Admin.renderLists(mem);
+        if (typeof Modal !== 'undefined') Modal.renderManual(mem);
+      });
+
+      // 2) 장비 목록 동기화
+      onSnapshot(collection(db, "assets"), (snap) => {
+        mem.assets = {};
+        snap.forEach(d => mem.assets[d.id] = d.data());
+        // UI 갱신
+        if (typeof Admin !== 'undefined') Admin.renderLists(mem);
+        if (typeof AdminDash !== 'undefined') AdminDash.render(mem);
+        if (typeof Monitor !== 'undefined') Monitor.render(mem);
+      });
+
+      // 3) 로그 동기화 (최근 500개)
+      const logQuery = query(collection(db, "logs"), orderBy("ts", "desc"), limit(500));
+      onSnapshot(logQuery, (snap) => {
+        mem.logs = [];
+        snap.forEach(d => mem.logs.push(d.data()));
+        // 로그 갱신
+        if (typeof Monitor !== 'undefined') Monitor.render(mem);
+        if (typeof AdminDash !== 'undefined') AdminDash.render(mem);
+      });
+      
+      console.log('Firebase Connected');
+      const connEl = document.getElementById('connMode');
+      if(connEl) {
+        connEl.textContent = '서버 연결됨';
+        connEl.className = 'live';
+      }
+    }
+
+    // 초기화 실행
+    init();
+
+    return {
+      // 데이터 조회 (Sync)
+      data: () => mem,
+
+      // 사원 추가/수정
+      addEmp: async (o) => {
+        await setDoc(doc(db, "employees", o.rfid), o);
+      },
+
+      // 장비 추가 (이미지는 별도 처리 후 URL만 넘어옴)
+      addAsset: async (o) => {
+        await setDoc(doc(db, "assets", o.id), o);
+      },
+
+      // 장비 상태 수정 (Patch)
+      setAsset: async (id, patch) => {
+        await updateDoc(doc(db, "assets", id), patch);
+      },
+      
+      deleteAsset: async (id) => {
+        // 실제 삭제 대신 상태 변경이 안전하나, 기존 로직 따름 (삭제 API 필요 시 구현)
+        // 여기서는 Firestore 문서 삭제가 아니라 UI 로직상 필요한 경우 사용
+        // 단, Firestore 삭제는 deleteDoc이 필요. 여기선 간단히 구현
+        // await deleteDoc(doc(db, "assets", id)); 
+        // 기존 코드가 deleteAsset을 요구하므로 구현:
+        const { deleteDoc } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js");
+        await deleteDoc(doc(db, "assets", id));
+      },
+
+      deleteEmp: async (rfid) => {
+        const { deleteDoc } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js");
+        await deleteDoc(doc(db, "employees", rfid));
+      },
+
+      // 로그 기록
+      log: async (o) => {
+        // Firestore는 ID 자동 생성
+        await addDoc(collection(db, "logs"), o);
+      },
+      
+      // 일괄 반납/불출용 (Batch)
+      batchUpdateAssets: async (ids, holderName, holderUser) => {
+        const batch = writeBatch(db);
+        ids.forEach(id => {
+          const ref = doc(db, "assets", id);
+          batch.update(ref, { holder: holderName, holderUser: holderUser || "" });
+        });
+        await batch.commit();
+      }
+    };
+  })();
+
+  // 글로벌 노출
+  window.Store = Store;
+
+  // --- 기존 유틸리티 ---
+  const App = {
+    val: (id) => document.getElementById(id).value.trim(),
+    set: (id, v) => document.getElementById(id).value = v,
+    toast: (msg, type='info') => {
+      const el = document.createElement('div');
+      el.className = `toast ${type}`;
+      el.innerHTML = `
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="${type==='success'?'M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z':'M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z'}" />
+        </svg>
+        <span>${msg}</span>
+      `;
+      document.getElementById('toast-container').appendChild(el);
+      requestAnimationFrame(()=>el.classList.add('show'));
+      setTimeout(()=>{
+        el.classList.remove('show');
+        setTimeout(()=>el.remove(), 400);
+      }, 3000);
+    },
+    showLoading: (b, txt) => {
+      const el = document.getElementById('loader-overlay');
+      if(b) {
+        document.getElementById('loader-text').textContent = txt || '처리 중...';
+        el.classList.add('show');
+      } else {
+        el.classList.remove('show');
+      }
+    }
+  };
+  window.App = App;
+
+  // --- Router ---
+  const Router = {
+    routes: {
+      '#/': 'page-main-home',
+      '#/checkout': 'page-checkout',
+      '#/admin': 'page-admin',
+      '#/monitor': 'page-monitor',
+      '#/admin-dash': 'page-admin-dash'
+    },
+    init: () => {
+      window.addEventListener('hashchange', Router.sync);
+      Router.sync();
+      setInterval(() => {
+        const d = new Date();
+        document.getElementById('clock').textContent = d.toLocaleTimeString();
+      }, 1000);
+    },
+    sync: () => {
+      const hash = location.hash || '#/';
+      const id = Router.routes[hash] || 'page-main-home';
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('show'));
+      document.getElementById(id).classList.add('show');
+      
+      // 스캐너 포커스 해제
+      Scan.focusNone();
+      
+      // 페이지별 초기화
+      if(hash === '#/monitor') Monitor.render();
+      if(hash === '#/admin') Admin.renderLists(Store.data());
+      if(hash === '#/admin-dash') AdminDash.render(Store.data());
+      if(hash === '#/') Checkout.clearList();
+    },
+    go: (hash) => location.hash = hash,
+    goToAdminDashboardWithAuth: () => {
+       const pw = prompt('관리자 비밀번호를 입력하세요:');
+       if (pw === 'mbcmbc20%') {
+           Router.go('#/admin-dash');
+       } else if (pw !== null) {
+           App.toast('비밀번호가 틀렸습니다.', 'error');
+       }
+    }
+  };
+  window.Router = Router;
+
+  // --- Scan (Keyboard Wedge) ---
+  const Scan = (()=>{
+    let buf='', last=0, targetInput=null;
+    const GAP=50;
+    function listenFor(_mode, el){
+      targetInput=el;
+      el.value='';
+      el.focus();
+    }
+    function focusNone(){ targetInput=null; }
+    window.addEventListener('keydown',(e)=>{
+      const now=Date.now();
+      if(now-last>GAP) buf='';
+      last=now;
+      if(e.key==='Enter'){
+        const v=buf.trim();
+        buf='';
+        if(!v) return;
+        // 1순위: RFID 모달
+        if (document.getElementById('rfid-scan-overlay').classList.contains('show')) {
+          document.getElementById('rfid_scan_input').value = v;
+          Modal.processRfidScan(v);
+          e.preventDefault();
+          return;
+        }
+        // 2순위: input 포커스
+        if(targetInput){
+          targetInput.value=v;
+          targetInput.dispatchEvent(new Event('input'));
+        }
+        // 3순위: 불출 화면
+        if(location.hash.startsWith('#/checkout')){
+          Checkout.scanAsset(v);
+        }
+        e.preventDefault();
+        return;
+      }
+      if(e.key.length===1) buf+=e.key;
+    });
+    return { listenFor, focusNone }
+  })();
+  window.Scan = Scan;
+
+  // --- Modal Logic ---
+  const Modal = (() => {
+    let currentMode = null; 
+    const overlay = document.getElementById('rfid-scan-overlay');
+    
+    function renderManual(data) {
+      const sel = document.getElementById('manual_emp_select');
+      if(!sel) return;
+      sel.innerHTML = '';
+      const emps = Object.values(data.employees).sort((a,b)=>a.name.localeCompare(b.name));
+      emps.forEach(e => {
+        const opt = document.createElement('option');
+        opt.value = e.rfid;
+        opt.textContent = `${e.name} (${e.dept||'-'})`;
+        sel.appendChild(opt);
+      });
+      if(emps.length===0) sel.innerHTML = '<option>사원 없음</option>';
+    }
+    
+    function showRfidScan(mode) {
+      currentMode = mode;
+      const title = document.getElementById('rfid-modal-title');
+      const msg = document.getElementById('rfid-msg');
+      if(mode === 'checkout') {
+         title.textContent = '장비 불출 - 사원 인증';
+         msg.textContent = '불출할 사원의 사원증을 태그하세요.';
+      } else {
+         title.textContent = '장비 반납 - 사원 인증';
+         msg.textContent = '반납하는 사원의 사원증을 태그하세요.';
+      }
+      document.getElementById('rfid-manual-entry').style.display = 'none';
+      overlay.classList.add('show');
+      setTimeout(() => document.getElementById('rfid_scan_input').focus(), 100);
+    }
+
+    function hide() {
+      overlay.classList.remove('show');
+      currentMode = null;
+    }
+
+    function toggleManual() {
+      const div = document.getElementById('rfid-manual-entry');
+      div.style.display = div.style.display === 'none' ? 'block' : 'none';
+    }
+    
+    async function processRfidScan(rfid) {
+       const emp = Store.data().employees[rfid];
+       if (!emp) {
+         App.toast('등록되지 않은 사원증입니다. 관리자에게 문의하세요.', 'error');
+         return;
+       }
+       proceed(emp);
+    }
+    
+    function processManualSelect() {
+      const rfid = document.getElementById('manual_emp_select').value;
+      if (!rfid) return;
+      const emp = Store.data().employees[rfid];
+      proceed(emp);
+    }
+    
+    async function proceed(employee) {
+       hide();
+       if (currentMode === 'checkout') {
+          Checkout.startForUser(employee);
+          Router.go('#/checkout');
+       } else if (currentMode === 'checkin') {
+          // 반납 프로세스
+          const mine = Object.values(Store.data().assets).filter(a => a.holder === employee.name);
+          if (mine.length === 0) {
+            App.toast(`${employee.name}님 명의로 반출된 장비가 없습니다.`, 'error');
+            return;
+          }
+          if(!confirm(`${employee.name}님 명의로 반출된 장비 ${mine.length}개를 일괄 반납하시겠습니까?`)) return;
+          
+          App.showLoading(true, '반납 처리 중...');
+          try {
+             const assetIds = mine.map(a => a.id);
+             await Store.batchUpdateAssets(assetIds, "", employee.name); // 반납처리
+             
+             // 로그 기록
+             for(let id of assetIds) {
+               await Store.log({ user: employee.name, assetId: id, assetName: Store.data().assets[id].name, action: 'IN', ts: Date.now() });
+             }
+             
+             App.toast(`총 ${mine.length}개 반납 완료`, 'success');
+          } catch (e) {
+             console.error(e);
+             App.toast('반납 실패: ' + e.message, 'error');
+          } finally {
+             App.showLoading(false);
+          }
+       }
+    }
+    
+    return { showRfidScan, hide, toggleManual, processRfidScan, processManualSelect, renderManual };
+  })();
+  window.Modal = Modal;
+
+  // --- Checkout Logic ---
+  const Checkout = (() => {
+    let list = [];
+    let currentUser = null;
+    
+    function renderList() {
+      const tb = document.querySelector('#scan_table tbody');
+      if(list.length === 0) {
+        tb.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 32px 0;">스캔 대기 중...</td></tr>`;
+        return;
+      }
+      let html = '';
+      list.forEach((id, idx) => {
+        const a = Store.data().assets[id];
+        const imgTag = a.imgUrl ? `<img class="imgph" src="${a.imgUrl}">` : '<div class="imgph"></div>';
+        html += `
+          <tr>
+            <td>${imgTag}</td>
+            <td>${a.id}</td><td>${a.name}</td><td>${a.cat||''}</td>
+            <td>${a.status==='ready'?'정상':'<span style="color:red">불가</span>'}</td>
+            <td><button class="btn inline danger" onclick="Checkout.remove(${idx})">삭제</button></td>
+          </tr>
+        `;
+      });
+      tb.innerHTML = html;
+    }
+    
+    function remove(idx) {
+      list.splice(idx, 1);
+      renderList();
+    }
+    
+    function finish() {
+       if (list.length === 0) {
+         App.toast('목록이 비어있습니다.', 'error');
+         return;
+       }
+       App.showLoading(true, '불출 처리 중...');
+       (async () => {
+         try {
+           const batchIds = [];
+           for (const id of list) {
+             const a = Store.data().assets[id];
+             if (a.holder) {
+               throw new Error(`장비(${a.name})는 이미 ${a.holder}님이 보유 중입니다.`);
+             }
+             batchIds.push(id);
+           }
+           
+           // 일괄 업데이트
+           await Store.batchUpdateAssets(batchIds, currentUser.name, currentUser.name); // holderUser 저장
+           
+           // 개별 로그 기록
+           for (const id of batchIds) {
+              const a = Store.data().assets[id];
+              await Store.log({ user: currentUser.name, assetId: id, assetName: a.name, action: 'OUT', ts: Date.now() });
+           }
+           
+           App.toast(`불출 완료 (${list.length}개)`, 'success');
+           Router.go('#/');
+         } catch(e) {
+           App.toast('실패: ' + e.message, 'error');
+         } finally {
+           App.showLoading(false);
+         }
+       })();
+    }
+    
+    return {
+      startForUser: (emp) => {
+        currentUser = emp;
+        list = [];
+        document.getElementById('checkout_user').textContent = `${emp.name} (${emp.dept||''})`;
+        document.getElementById('manualPanel').style.display = 'none';
+        renderList();
+      },
+      scanAsset: (id, quiet=false) => {
+        if (!currentUser) {
+          if(!quiet) App.toast('사원 인증이 필요합니다.', 'error');
+          return;
+        }
+        const assets = Store.data().assets;
+        if (!assets[id]) {
+          if(!quiet) App.toast('등록되지 않은 장비입니다.', 'error');
+          return;
+        }
+        if (list.includes(id)) {
+          if(!quiet) App.toast('이미 목록에 있습니다.', 'info');
+          return;
+        }
+        if (assets[id].holder) {
+           if(!quiet) App.toast(`이미 반출된 장비입니다. (보유자: ${assets[id].holder})`, 'error');
+           return;
+        }
+        list.push(id);
+        renderList();
+        App.toast(`장비 추가: ${assets[id].name}`, 'success');
+      },
+      clearList: () => { list = []; renderList(); },
+      finish, remove,
+      toggleManual: () => {
+        const p = document.getElementById('manualPanel');
+        p.style.display = p.style.display==='none'?'block':'none';
+      },
+      addManualAssetSingle: () => {
+        const id = App.val('manual_asset_single');
+        if(id) Checkout.scanAsset(id);
+        App.set('manual_asset_single','');
+      },
+      addManualAssetBulk: () => {
+         const raw = App.val('manual_asset_bulk');
+         const ids = raw.split(/[\s,;]+/).map(s=>s.trim()).filter(Boolean);
+         ids.forEach(id => Checkout.scanAsset(id, true));
+         App.set('manual_asset_bulk','');
+      }
+    };
+  })();
+  window.Checkout = Checkout;
+
+  // --- Admin Dashboard ---
+  const AdminDash = {
+    render: (data) => {
+      const all = Object.values(data.assets);
+      const out = all.filter(a => a.holder).length;
+      const total = all.length;
+      const perc = total > 0 ? (out/total)*100 : 0;
+      
+      const bar = document.getElementById('dash_stat_bar');
+      if(bar) {
+         document.getElementById('dash_stat_out').innerHTML = `${out} <span>/ ${total}</span>`;
+         document.getElementById('dash_stat_label_out').textContent = `반출: ${out}`;
+         document.getElementById('dash_stat_label_in').textContent = `보관: ${total - out}`;
+         bar.style.width = `${perc}%`;
+      }
+    }
+  };
+  window.AdminDash = AdminDash;
+
+  // --- Admin Logic (Modified for Firebase) ---
+  const Admin = {
+    previewImg(inp){
+      const f=inp.files&&inp.files[0];
+      const preview = document.getElementById('eq_preview');
+      if(!f) { preview.src = ''; return; }
+      const r=new FileReader();
+      r.onload=()=>{ preview.src=r.result; };
+      r.readAsDataURL(f);
+    },
+    
+    // 사원 등록
+    addEmployee: async () => {
+      const name = App.val('emp_name'), rfid = App.val('emp_rfid');
+      if(!name || !rfid) { App.toast('이름과 RFID는 필수입니다.', 'error'); return; }
+      try {
+        await Store.addEmp({
+          name, rfid,
+          dept: App.val('emp_dept'),
+          role: document.getElementById('emp_role').value
+        });
+        App.set('emp_name',''); App.set('emp_rfid',''); App.set('emp_dept','');
+        App.toast('사원 등록 완료', 'success');
+      } catch(e) { App.toast('오류: '+e.message, 'error'); }
+    },
+
+    // 장비 등록 (Firebase Storage 적용)
+    addAsset: async () => {
+      const id = App.val('eq_id'), name = App.val('eq_name');
+      if (!id || !name) { App.toast('장비ID와 명칭은 필수입니다.', 'error'); return; }
+      
+      App.showLoading(true, '장비 등록 중...');
+      try {
+        const file = document.getElementById('eq_img').files[0];
+        let imgUrl = '';
+        
+        if (file) {
+             // 이미지 리사이징 (Canvas)
+             const resizedDataUrl = await new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                   const img = new Image();
+                   img.onload = () => {
+                      const canvas = document.createElement('canvas');
+                      const MAX_WIDTH = 800; 
+                      let width = img.width;
+                      let height = img.height;
+                      if (width > MAX_WIDTH) {
+                         height *= MAX_WIDTH / width;
+                         width = MAX_WIDTH;
+                      }
+                      canvas.width = width;
+                      canvas.height = height;
+                      const ctx = canvas.getContext('2d');
+                      ctx.drawImage(img, 0, 0, width, height);
+                      resolve(canvas.toDataURL('image/jpeg', 0.7));
+                   };
+                   img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+             });
+    
+             // Firebase Storage 업로드
+             const storageRef = ref(storage, `images/${id}_${Date.now()}.jpg`);
+             await uploadString(storageRef, resizedDataUrl, 'data_url');
+             imgUrl = await getDownloadURL(storageRef);
+        }
+
+        await Store.addAsset({ 
+          id, name, 
+          cat: App.val('eq_cat'), 
+          year: App.val('eq_year'), 
+          note: App.val('eq_note'),
+          imgUrl: imgUrl, 
+          status: 'ready', 
+          holder: "", 
+          holderUser: "" 
+        });
+
+        // 초기화
+        App.set('eq_id',''); App.set('eq_name',''); App.set('eq_cat','');
+        App.set('eq_year',''); App.set('eq_note','');
+        document.getElementById('eq_preview').src='';
+        document.getElementById('eq_img').value='';
+        
+        App.toast('장비 등록 완료', 'success');
+      } catch(e) {
+        console.error(e);
+        App.toast('등록 실패: '+e.message, 'error');
+      } finally {
+        App.showLoading(false);
+      }
+    },
+
+    renderLists: (data) => {
+      // 사원 목록
+      const emps = Object.values(data.employees);
+      const tbE = document.getElementById('emp_list_body');
+      if(tbE) {
+        tbE.innerHTML = emps.map(e => `
+          <tr>
+            <td>${e.name}</td><td>${e.dept||'-'}</td><td>${e.rfid}</td>
+            <td>${e.role==='manager'?'관리자':'일반'}</td>
+            <td><button class="btn inline danger" onclick="Admin.deleteEmployee('${e.rfid}')">삭제</button></td>
+          </tr>
+        `).join('');
+      }
+      // 장비 목록 (Home 팝업용 데이터는 별도)
+    },
+    
+    deleteEmployee: async (rfid) => {
+       if(!confirm('삭제하시겠습니까?')) return;
+       await Store.deleteEmp(rfid);
+       App.toast('삭제됨', 'info');
+    }
+  };
+  window.Admin = Admin;
+
+  // --- Home Logic ---
+  const Home = {
+    showAllAssets: () => {
+       const assets = Object.values(Store.data().assets);
+       const tb = document.querySelector('#all-assets-table tbody');
+       if(!tb) return;
+       let html = '';
+       if(assets.length === 0) {
+          html = '<tr><td colspan="6" style="text-align:center;">장비가 없습니다.</td></tr>';
+       } else {
+          assets.forEach(a => {
+             const st = a.holder ? '<span class="badge bd-out">반출</span>' : '<span class="badge bd-ok">보관</span>';
+             const img = a.imgUrl ? `<img class="imgph" src="${a.imgUrl}">` : '';
+             html += `<tr><td>${img}</td><td>${a.id}</td><td>${a.name}</td><td>${a.cat||''}</td><td>${st}</td><td>${a.holder||'-'}</td></tr>`;
+          });
+       }
+       tb.innerHTML = html;
+       document.getElementById('asset-list-overlay').classList.add('show');
+    },
+    hideAllAssets: () => {
+       document.getElementById('asset-list-overlay').classList.remove('show');
+    }
+  };
+  window.Home = Home;
+
+  // --- Monitor Logic ---
+  const Monitor = {
+    currentLogs: [],
+    render: (data) => {
+       data = data || Store.data();
+       const q = App.val('filter_text').toLowerCase();
+       const st = App.val('filter_state');
+       const { logs } = data;
+       
+       const filtered = logs.filter(l => {
+          const s = `${l.user} ${l.assetId} ${l.assetName}`.toLowerCase();
+          return (!q || s.includes(q)) && (!st || l.action === st);
+       });
+       Monitor.currentLogs = filtered;
+       
+       const tb = document.querySelector('#log_table tbody');
+       if(!tb) return;
+       if(filtered.length === 0) {
+          tb.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:20px;">기록 없음</td></tr>';
+       } else {
+          tb.innerHTML = filtered.map(l => {
+             const d = new Date(l.ts);
+             const tsStr = `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()} ${d.getHours()}:${d.getMinutes()}`;
+             const badge = l.action==='OUT' ? '<span class="badge bd-out">반출</span>' : '<span class="badge bd-ok">반납</span>';
+             return `<tr><td>${tsStr}</td><td>${l.user}</td><td>${l.assetId}</td><td>${l.assetName}</td><td>${badge}</td><td>완료</td></tr>`;
+          }).join('');
+       }
+    },
+    exportExcel: () => {
+       if(Monitor.currentLogs.length === 0) { App.toast('내보낼 데이터가 없습니다.', 'error'); return; }
+       let csv = "시간,사용자,장비ID,장비명,상태\n";
+       Monitor.currentLogs.forEach(l => {
+          const d = new Date(l.ts);
+          const ts = `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()} ${d.getHours()}:${d.getMinutes()}`;
+          csv += `${ts},${l.user},${l.assetId},${l.assetName},${l.action}\n`;
+       });
+       const blob = new Blob(["\uFEFF"+csv], { type: 'text/csv;charset=utf-8;' });
+       const url = URL.createObjectURL(blob);
+       const link = document.createElement("a");
+       link.setAttribute("href", url);
+       link.setAttribute("download", "log_export.csv");
+       document.body.appendChild(link);
+       link.click();
+       document.body.removeChild(link);
+    }
+  };
+  window.Monitor = Monitor;
+
+  // Start App
+  Router.init();
+</script>
+</body>
+</html>
