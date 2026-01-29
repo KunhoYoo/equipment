@@ -614,11 +614,11 @@
   <div id="page-main-home" class="page">
     <div class="main-action-btn card" id="btn-main-checkout" onclick="Modal.showRfidScan('checkout')">
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" /></svg>
-      <span>장비 불출</span>
+      <span>장비 불출 (나가요)</span>
     </div>
     <div class="main-action-btn card" id="btn-main-checkin" onclick="Modal.showRfidScan('checkin')">
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" /></svg>
-      <span>장비 반납</span>
+      <span>장비 반납 (들어왔어요)</span>
     </div>
   </div>
 
@@ -859,11 +859,11 @@
 
 <script type="module">
   // ==========================================
-  // 1. Firebase 설정 및 초기화 (CDN 방식)
+  // 1. Firebase 설정 (Realtime Database 버전으로 수정됨)
   // ==========================================
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-  import { getFirestore, collection, doc, setDoc, updateDoc, addDoc, onSnapshot, writeBatch, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-  import { getStorage, ref, uploadString, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+  import { getDatabase, ref, set, update, push, onValue, child, get, remove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+  import { getStorage, ref as sRef, uploadString, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyCcWWLiYxvKB8_9gaahW5fwyBavgO-AZQ8",
@@ -875,47 +875,49 @@
   };
 
   const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
+  const db = getDatabase(app); // Realtime Database
   const storage = getStorage(app);
 
   // ==========================================
-  // 2. 데이터 저장소 (FirebaseStore)
+  // 2. 데이터 저장소 (Firebase Realtime DB)
   // ==========================================
-  // 메모리 데이터 (기존 UI 호환용)
   let mem = { employees: {}, assets: {}, logs: [] };
 
   const Store = (() => {
     function init() {
-      // 1) 사원 목록 동기화
-      onSnapshot(collection(db, "employees"), (snap) => {
-        mem.employees = {};
-        snap.forEach(d => mem.employees[d.id] = d.data());
-        // UI 갱신 (Admin 로드 후)
+      // 1) 사원 목록 동기화 (Realtime DB)
+      onValue(ref(db, 'employees'), (snapshot) => {
+        const val = snapshot.val();
+        mem.employees = val || {};
+        // UI 갱신
         if (typeof Admin !== 'undefined') Admin.renderLists(mem);
         if (typeof Modal !== 'undefined') Modal.renderManual(mem);
       });
 
-      // 2) 장비 목록 동기화
-      onSnapshot(collection(db, "assets"), (snap) => {
-        mem.assets = {};
-        snap.forEach(d => mem.assets[d.id] = d.data());
+      // 2) 장비 목록 동기화 (Realtime DB)
+      onValue(ref(db, 'assets'), (snapshot) => {
+        const val = snapshot.val();
+        mem.assets = val || {};
         // UI 갱신
         if (typeof Admin !== 'undefined') Admin.renderLists(mem);
         if (typeof AdminDash !== 'undefined') AdminDash.render(mem);
         if (typeof Monitor !== 'undefined') Monitor.render(mem);
       });
 
-      // 3) 로그 동기화 (최근 500개)
-      const logQuery = query(collection(db, "logs"), orderBy("ts", "desc"), limit(500));
-      onSnapshot(logQuery, (snap) => {
-        mem.logs = [];
-        snap.forEach(d => mem.logs.push(d.data()));
-        // 로그 갱신
+      // 3) 로그 동기화 (Realtime DB는 자동 정렬 지원이 약하므로 전체 로드 후 JS 정렬)
+      // (최적화를 위해 limitToLast 등을 쓸 수 있으나 코드 단순화를 위해 전체 로드)
+      onValue(ref(db, 'logs'), (snapshot) => {
+        const val = snapshot.val();
+        if(val) {
+            mem.logs = Object.values(val).sort((a,b) => b.ts - a.ts); // 최신순 정렬
+        } else {
+            mem.logs = [];
+        }
         if (typeof Monitor !== 'undefined') Monitor.render(mem);
         if (typeof AdminDash !== 'undefined') AdminDash.render(mem);
       });
       
-      console.log('Firebase Connected');
+      console.log('Firebase Realtime DB Connected');
       const connEl = document.getElementById('connMode');
       if(connEl) {
         connEl.textContent = '서버 연결됨';
@@ -932,48 +934,42 @@
 
       // 사원 추가/수정
       addEmp: async (o) => {
-        await setDoc(doc(db, "employees", o.rfid), o);
+        // Realtime DB의 경로에 저장
+        await set(ref(db, 'employees/' + o.rfid), o);
       },
 
-      // 장비 추가 (이미지는 별도 처리 후 URL만 넘어옴)
+      // 장비 추가
       addAsset: async (o) => {
-        await setDoc(doc(db, "assets", o.id), o);
+        await set(ref(db, 'assets/' + o.id), o);
       },
 
-      // 장비 상태 수정 (Patch)
+      // 장비 상태 수정
       setAsset: async (id, patch) => {
-        await updateDoc(doc(db, "assets", id), patch);
+        await update(ref(db, 'assets/' + id), patch);
       },
       
       deleteAsset: async (id) => {
-        // 실제 삭제 대신 상태 변경이 안전하나, 기존 로직 따름 (삭제 API 필요 시 구현)
-        // 여기서는 Firestore 문서 삭제가 아니라 UI 로직상 필요한 경우 사용
-        // 단, Firestore 삭제는 deleteDoc이 필요. 여기선 간단히 구현
-        // await deleteDoc(doc(db, "assets", id)); 
-        // 기존 코드가 deleteAsset을 요구하므로 구현:
-        const { deleteDoc } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js");
-        await deleteDoc(doc(db, "assets", id));
+        await remove(ref(db, 'assets/' + id));
       },
 
       deleteEmp: async (rfid) => {
-        const { deleteDoc } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js");
-        await deleteDoc(doc(db, "employees", rfid));
+        await remove(ref(db, 'employees/' + rfid));
       },
 
       // 로그 기록
       log: async (o) => {
-        // Firestore는 ID 자동 생성
-        await addDoc(collection(db, "logs"), o);
+        // push()로 고유 ID 생성 후 저장
+        await push(ref(db, 'logs'), o);
       },
       
       // 일괄 반납/불출용 (Batch)
       batchUpdateAssets: async (ids, holderName, holderUser) => {
-        const batch = writeBatch(db);
+        const updates = {};
         ids.forEach(id => {
-          const ref = doc(db, "assets", id);
-          batch.update(ref, { holder: holderName, holderUser: holderUser || "" });
+          updates['assets/' + id + '/holder'] = holderName;
+          updates['assets/' + id + '/holderUser'] = holderUser || "";
         });
-        await batch.commit();
+        await update(ref(db), updates);
       }
     };
   })();
@@ -1133,6 +1129,7 @@
       document.getElementById('rfid-manual-entry').style.display = 'none';
       overlay.classList.add('show');
       setTimeout(() => document.getElementById('rfid_scan_input').focus(), 100);
+      renderManual(Store.data()); // Show updated list
     }
 
     function hide() {
@@ -1161,12 +1158,18 @@
       proceed(emp);
     }
     
+    // *** [중요 수정] 모달 닫기 순서 변경 ***
     async function proceed(employee) {
+       // currentMode를 변수에 먼저 저장
+       const mode = currentMode;
+       
+       // 모달을 닫음 (currentMode가 null이 됨)
        hide();
-       if (currentMode === 'checkout') {
+       
+       if (mode === 'checkout') {
           Checkout.startForUser(employee);
           Router.go('#/checkout');
-       } else if (currentMode === 'checkin') {
+       } else if (mode === 'checkin') {
           // 반납 프로세스
           const mine = Object.values(Store.data().assets).filter(a => a.holder === employee.name);
           if (mine.length === 0) {
@@ -1337,7 +1340,7 @@
   };
   window.AdminDash = AdminDash;
 
-  // --- Admin Logic (Modified for Firebase) ---
+  // --- Admin Logic ---
   const Admin = {
     previewImg(inp){
       const f=inp.files&&inp.files[0];
@@ -1400,7 +1403,7 @@
              });
     
              // Firebase Storage 업로드
-             const storageRef = ref(storage, `images/${id}_${Date.now()}.jpg`);
+             const storageRef = sRef(storage, `images/${id}_${Date.now()}.jpg`);
              await uploadString(storageRef, resizedDataUrl, 'data_url');
              imgUrl = await getDownloadURL(storageRef);
         }
@@ -1444,7 +1447,6 @@
           </tr>
         `).join('');
       }
-      // 장비 목록 (Home 팝업용 데이터는 별도)
     },
     
     deleteEmployee: async (rfid) => {
