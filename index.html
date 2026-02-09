@@ -814,7 +814,8 @@
          </svg>
        </div>
        <p id="rfid-msg">사원증을 리더기에 대주세요.</p>
-       <input id="rfid_scan_input" autocomplete="off" placeholder="여기를 클릭 후 스캔하세요" onblur="setTimeout(()=>this.focus(), 10)">
+       <input id="rfid_scan_input" autocomplete="off" placeholder="여기를 클릭 후 스캔하세요" 
+       onblur="setTimeout(() => { if(document.activeElement.id !== 'manual_emp_select') this.focus() }, 10)">
        
 <div id="rfid-manual-entry">
          <label>사원 선택 (수동)</label>
