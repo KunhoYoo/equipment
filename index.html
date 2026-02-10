@@ -528,7 +528,7 @@
     }
     #asset-list-modal {
       background: var(--panel);
-      width: 90%; max-width: 1000px; max-height: 80vh;
+      width: 95%; max-width: 1300px; max-height: 90vh;
       border-radius: var(--radius-lg);
       box-shadow: var(--shadow-lg);
       display: flex; flex-direction: column;
@@ -1005,15 +1005,16 @@
 
   // --- 기존 유틸리티 ---
 // [추가] 카메라 객체 (사진 촬영 및 반납 처리)
+// [수정] 카메라 객체 (고화질 적용, window 전역 연결)
 const Camera = {
   stream: null,
   blobUrl: null,
-  targetAssets: [], // 반납할 장비 목록 (배열)
-  targetUser: null, // 반납자 정보
+  targetAssets: [],
+  targetUser: null,
 
   // 카메라 켜기
   open: async (assets, user) => {
-    Camera.targetAssets = assets; // 장비 목록 저장
+    Camera.targetAssets = assets;
     Camera.targetUser = user;
     
     const modal = document.getElementById('camera-modal');
@@ -1023,9 +1024,13 @@ const Camera = {
     Camera.reset();
     
     try {
-      // 후면 카메라 시도, 실패 시 전면 카메라
+      // [수정] 1920x1080 해상도 요청
       Camera.stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: 'environment' } 
+        video: { 
+          facingMode: 'environment',
+          width: { ideal: 1920 },
+          height: { ideal: 1080 }
+        } 
       });
       if(video) video.srcObject = Camera.stream;
     } catch (err) {
@@ -1042,11 +1047,12 @@ const Camera = {
     const preview = document.getElementById('camera-preview');
     
     if(video && canvas) {
+      // 비디오 원본 해상도(1920x1080)대로 캔버스 크기 설정
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
       canvas.getContext('2d').drawImage(video, 0, 0);
       
-      Camera.blobUrl = canvas.toDataURL('image/jpeg', 0.8);
+      Camera.blobUrl = canvas.toDataURL('image/jpeg', 0.9); // 화질 0.9로 상향
       if(preview) {
         preview.src = Camera.blobUrl;
         preview.style.display = 'block';
@@ -1068,32 +1074,28 @@ const Camera = {
     document.getElementById('btn-confirm-return').style.display = 'none';
   },
   
-  // 반납 확정 (서버 업로드)
+  // 반납 확정
   confirm: async () => {
     if (!Camera.blobUrl) return;
     App.showLoading(true, '사진 업로드 및 반납 처리 중...');
     
     try {
-      // 대표 파일명: returns/시간_첫번째장비ID.jpg
       const mainAssetId = Camera.targetAssets[0].id;
       const filename = `returns/${Date.now()}_${mainAssetId}.jpg`;
-      
-      // [중요] 사용자님이 설정하신 sRef 사용
       const storageRef = sRef(storage, filename);
       
       await uploadString(storageRef, Camera.blobUrl, 'data_url');
       const photoUrl = await getDownloadURL(storageRef);
       
-      // 가지고 있는 모든 장비에 대해 반납 처리
       for (const asset of Camera.targetAssets) {
          await Store.processReturnWithPhoto(asset.id, Camera.targetUser.rfid, photoUrl);
       }
       
-      App.toast(`반납이 완료되었습니다. (${Camera.targetAssets.length}건)`, 'success');
+      App.toast(`반납이 완료되었습니다.`, 'success');
       Camera.close();
     } catch (e) {
       console.error(e);
-      App.toast('처리 중 오류가 발생했습니다: ' + e.message, 'error');
+      App.toast('오류 발생: ' + e.message, 'error');
     } finally {
       App.showLoading(false);
     }
@@ -1108,7 +1110,10 @@ const Camera = {
       Camera.stream = null;
     }
   }
-};  
+};
+
+// [중요] HTML에서 Camera를 인식할 수 있도록 window에 연결
+window.Camera = Camera;
 
   const App = {
     val: (id) => document.getElementById(id).value.trim(),
@@ -1476,57 +1481,125 @@ const Camera = {
   // --- Admin Logic ---
   const Admin = {
   
-// [추가] 반납 사진 확인 팝업
+// [수정] 반납 사진 확인 팝업 (불출 시간 추적 로직 개선)
   showReturnLogs: () => {
     get(ref(db, 'logs')).then((snapshot) => {
+      // 1. 데이터 가져오기
       if (!snapshot.exists()) return App.toast('기록이 없습니다.');
-      
       const data = snapshot.val();
-      // 반납(return)이면서 사진(photoUrl)이 있는 로그만 필터링 + 최신순 정렬
-      const list = Object.values(data)
-          .filter(log => log.type === 'return' && log.photoUrl)
-          .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
       
-      if(list.length === 0) return App.toast('사진이 포함된 반납 기록이 없습니다.');
+      // 전체 로그 가져오기 (날짜 계산을 위해 헬퍼 함수 사용)
+      const getTime = (log) => log.ts || (log.timestamp ? new Date(log.timestamp).getTime() : 0);
+      const allLogs = Object.values(data).sort((a, b) => getTime(a) - getTime(b));
 
-      // 목록 HTML 생성
-      let html = `<div style="max-height:400px; overflow:auto;"><table class="table">`;
-      html += `<thead><tr><th>시간</th><th>사용자ID</th><th>사진</th></tr></thead><tbody>`;
-      
-      list.forEach(log => {
-          const date = new Date(log.timestamp).toLocaleString();
+      // 반납(return)이면서 사진(photoUrl)이 있는 로그만 필터링 + 최신순 정렬
+      const returnLogs = allLogs
+          .filter(log => log.type === 'return' && log.photoUrl)
+          .sort((a, b) => getTime(b) - getTime(a));
+
+      if(returnLogs.length === 0) return App.toast('사진이 포함된 반납 기록이 없습니다.');
+
+      // 2. HTML 표 만들기
+      let html = `<div style="max-height:600px; overflow:auto;"><table class="table" style="width:100%; table-layout: fixed;">`;
+      html += `<thead>
+        <tr style="background:#f9fafb; text-align:left; border-bottom:2px solid #eee;">
+          <th style="padding:12px; width:18%;">불출 시간</th>
+          <th style="padding:12px; width:18%;">반납 시간</th>
+          <th style="padding:12px; width:12%;">사용자</th>
+          <th style="padding:12px; width:22%;">장비명</th>
+          <th style="padding:12px; width:10%;">사진</th>
+        </tr>
+      </thead><tbody>`;
+
+      returnLogs.forEach(returnLog => {
+          const returnDate = new Date(returnLog.timestamp).toLocaleString();
+          
+          // [핵심 1] 반납자의 ID(RFID)를 이용해 이름 찾기
+          let userName = returnLog.userId; // 기본은 ID
+          if(mem.employees && mem.employees[returnLog.userId]) {
+             userName = mem.employees[returnLog.userId].name; // 이름으로 변환 (예: 홍길동)
+          }
+
+          let assetName = returnLog.assetId;
+          if(mem.assets && mem.assets[returnLog.assetId]) assetName = mem.assets[returnLog.assetId].name;
+
+          // [핵심 2] 불출 시간 추적 로직 수정
+          // 조건: 액션이 'OUT'이고, 장비ID가 같고, 사용자 이름이 같고, 반납 시간보다 이전인 것 중 가장 최근 것
+          const returnTs = new Date(returnLog.timestamp).getTime();
+          
+          const checkoutLog = allLogs
+            .filter(l => 
+                l.action === 'OUT' &&               // 타입이 checkout이 아니라 action이 'OUT'임
+                l.assetId === returnLog.assetId &&  // 같은 장비
+                l.user === userName &&              // 같은 사용자 (이름으로 매칭)
+                (l.ts || 0) < returnTs              // 반납보다 이전에 일어난 일
+            )
+            .sort((a, b) => (b.ts||0) - (a.ts||0))  // 최신순 정렬
+            .shift();                               // 가장 첫번째(최신) 가져오기
+
+          const checkoutDate = checkoutLog ? new Date(checkoutLog.ts).toLocaleString() : '-';
+          
           html += `
-            <tr>
-              <td>${date}</td>
-              <td>${log.userId}</td>
-              <td>
-                <a href="${log.photoUrl}" target="_blank" style="color:#1477C9; text-decoration:underline; font-weight:bold;">
-                  📸 사진 보기
-                </a>
-              </td>
+            <tr style="border-bottom:1px solid #f0f0f0;">
+              <td style="padding:12px; color:#666; font-size:13px;">${checkoutDate}</td>
+              <td style="padding:12px; font-weight:500;">${returnDate}</td>
+              <td style="padding:12px; font-weight:bold; color:#333;">${userName}</td>
+              <td style="padding:12px; color:#444; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${assetName}</td>
+              <td style="padding:12px;"><a href="${returnLog.photoUrl}" target="_blank" style="display:inline-block; padding:4px 8px; background:#e8f4ff; color:#1477C9; border-radius:4px; font-weight:bold; font-size:12px; text-decoration:none;">📸 보기</a></td>
             </tr>`;
       });
       html += `</tbody></table></div>`;
-      
-      // 기존 모달창 재활용하여 표시
+
+      // 3. 모달 화면 설정 (방해되는 요소 숨기기)
       const modal = document.getElementById('rfid-scan-modal');
+      const footer = modal.querySelector('.rfid-modal-footer');
+      const closeBtn = modal.querySelector('.rfid-modal-header .btn');
       const overlay = document.getElementById('rfid-scan-overlay');
       
+      const iconWrapper = modal.querySelector('.rfid-icon-wrapper');
+      const inputField = document.getElementById('rfid_scan_input');
+      const manualEntry = document.getElementById('rfid-manual-entry');
+      
+      if(footer) footer.style.display = 'none';
+      if(iconWrapper) iconWrapper.style.display = 'none';
+      if(inputField) inputField.style.display = 'none';
+      if(manualEntry) manualEntry.style.display = 'none';
+
+      document.getElementById('rfid-modal-title').textContent = "반납 사진 및 이력 확인";
+      document.getElementById('rfid-msg').innerHTML = html;
+      
       if(modal) {
-          document.querySelector('.rfid-modal-header h2').textContent = "반납 사진 기록";
-          document.querySelector('.rfid-modal-body').innerHTML = html;
-          document.querySelector('.rfid-modal-footer').style.display = 'none'; // 하단 버튼 숨김
-          
-          modal.style.display = 'block';
-          if(overlay) overlay.classList.add('show');
-          
-          // 닫기 기능 (오버레이 클릭 시 닫힘)
+        modal.style.maxWidth = '1300px'; 
+        modal.style.width = '95%';
+        modal.style.display = 'block';
+      }
+      if(overlay) overlay.classList.add('show');
+
+      // 4. 닫을 때 복구
+      const restoreAndClose = () => {
+         if(footer) footer.style.display = 'flex';
+         if(iconWrapper) iconWrapper.style.display = 'flex';
+         if(inputField) inputField.style.display = 'block';
+         if(manualEntry) manualEntry.style.display = 'none'; 
+
+         if(modal) {
+             modal.style.maxWidth = '560px';
+             modal.style.width = '100%';
+             modal.style.display = 'none';
+         }
+         document.getElementById('rfid-modal-title').textContent = "사원증 태그";
+         document.getElementById('rfid-msg').textContent = "사원증을 리더기에 대주세요.";
+         if(inputField) inputField.value = ''; 
+         
+         if(overlay) overlay.classList.remove('show');
+         closeBtn.onclick = () => Modal.hide(); 
+         overlay.onclick = null;
+      };
+
+      if(closeBtn) closeBtn.onclick = restoreAndClose;
+      if(overlay) {
           overlay.onclick = (e) => {
-              if(e.target === overlay) {
-                  overlay.classList.remove('show');
-                  // 모달 내용 원상복구 (필요 시 리로드가 낫습니다)
-                  location.reload(); 
-              }
+              if(e.target === overlay) restoreAndClose();
           };
       }
     });
@@ -1763,21 +1836,21 @@ const Camera = {
   Router.init();
 </script>
 <div id="camera-modal" style="display:none; position:fixed; inset:0; z-index:2000; background:rgba(0,0,0,0.8); align-items:center; justify-content:center;">
-  <div style="background:white; padding:20px; border-radius:8px; width:90%; max-width:500px; text-align:center;">
-    <h3 style="margin-top:0;">반납 물품 촬영</h3>
-    <p style="color:var(--text-secondary); font-size:14px; margin-bottom:15px;">반납할 장비의 상태가 잘 보이도록 촬영해주세요.</p>
+  <div style="background:white; padding:20px; border-radius:12px; width:95%; max-width:1000px; text-align:center;">
+    <h3 style="margin-top:0; font-size:20px;">반납 물품 촬영</h3>
+    <p style="color:var(--text-secondary); font-size:15px; margin-bottom:15px;">반납할 장비가 화면에 꽉 차게 촬영해주세요.</p>
     
-    <div style="position:relative; width:100%; padding-top:75%; background:#000; border-radius:8px; overflow:hidden; margin-bottom:15px;">
-      <video id="camera-video" autoplay playsinline style="position:absolute; top:0; left:0; width:100%; height:100%; object-fit:cover;"></video>
+    <div style="position:relative; width:100%; padding-top:56.25%; background:#000; border-radius:8px; overflow:hidden; margin-bottom:20px; box-shadow: 0 4px 10px rgba(0,0,0,0.2);">
+      <video id="camera-video" autoplay playsinline style="position:absolute; top:0; left:0; width:100%; height:100%; object-fit:contain;"></video>
       <canvas id="camera-canvas" style="display:none;"></canvas>
-      <img id="camera-preview" style="display:none; position:absolute; top:0; left:0; width:100%; height:100%; object-fit:cover;">
+      <img id="camera-preview" style="display:none; position:absolute; top:0; left:0; width:100%; height:100%; object-fit:contain;">
     </div>
 
-    <div style="display:flex; gap:10px; justify-content:center;">
-      <button id="btn-capture" class="btn primary" onclick="Camera.capture()">촬영하기</button>
-      <button id="btn-recapture" class="btn ghost" onclick="Camera.reset()" style="display:none;">다시 찍기</button>
-      <button id="btn-confirm-return" class="btn primary" onclick="Camera.confirm()" style="display:none;">반납 완료</button>
-      <button class="btn danger" onclick="Camera.close()">취소</button>
+    <div style="display:flex; gap:12px; justify-content:center;">
+      <button id="btn-capture" class="btn primary" onclick="Camera.capture()" style="padding: 12px 24px; font-size:16px;">📸 촬영하기</button>
+      <button id="btn-recapture" class="btn ghost" onclick="Camera.reset()" style="display:none; padding: 12px 24px; font-size:16px;">🔄 다시 찍기</button>
+      <button id="btn-confirm-return" class="btn primary" onclick="Camera.confirm()" style="display:none; padding: 12px 24px; font-size:16px;">✅ 반납 완료</button>
+      <button class="btn danger" onclick="Camera.close()" style="padding: 12px 24px; font-size:16px;">취소</button>
     </div>
   </div>
 </div>
